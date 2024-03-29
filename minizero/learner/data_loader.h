@@ -74,6 +74,7 @@ public:
 
 protected:
     virtual bool addEnvironmentLoader();
+    virtual EnvironmentLoader  loadGame(const std::string& file_content);
     virtual bool sampleData();
 
     virtual void setAlphaZeroTrainingData(int batch_index);

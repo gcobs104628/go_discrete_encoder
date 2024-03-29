@@ -110,9 +110,39 @@ bool DataLoaderThread::addEnvironmentLoader()
     std::string env_string = getSharedData()->getNextEnvString();
     if (env_string.empty()) { return false; }
 
-    EnvironmentLoader env_loader;
-    if (env_loader.loadFromString(env_string)) { getSharedData()->replay_buffer_.addData(env_loader); }
+    // EnvironmentLoader env_loader;
+
+    EnvironmentLoader env_loader = loadGame(env_string);
+    if (!env_loader.getActionPairs().empty()) {
+        assert(!env_loader.getTag("BR").empty());
+        std::lock_guard<std::mutex> lock(getSharedData()->mutex_);
+        getSharedData()->replay_buffer_.addData(env_loader);
+    }
+
     return true;
+}
+
+EnvironmentLoader DataLoaderThread::loadGame(const std::string& file_content)
+{
+    EnvironmentLoader env_loader;
+
+    if (file_content.empty()) { return EnvironmentLoader(); }
+    if (file_content.find("(") == std::string::npos) { return EnvironmentLoader(); }
+
+    SGFLoader sgf_loader;
+    if (!sgf_loader.loadFromString(file_content)) { return EnvironmentLoader(); }
+    if (std::stoi(sgf_loader.getTags().at("SZ")) != config::env_board_size) { return EnvironmentLoader(); }
+
+    env_loader.reset();
+    env_loader.addTag("SZ", sgf_loader.getTags().at("SZ"));
+    env_loader.addTag("KM", sgf_loader.getTags().at("KM"));
+    env_loader.addTag("RE", std::to_string(sgf_loader.getTags().at("RE")[0] == 'B' ? 1.0f : -1.0f));
+    env_loader.addTag("PB", sgf_loader.getTags().at("PB"));
+    env_loader.addTag("PW", sgf_loader.getTags().at("PW"));
+    env_loader.addTag("BR", sgf_loader.getTags().at("BR"));
+    env_loader.addTag("WR", sgf_loader.getTags().at("WR"));
+    for (auto& action_string : sgf_loader.getActions()) { env_loader.addActionPair(Action(action_string.first, std::stoi(sgf_loader.getTags().at("SZ"))), action_string.second); }
+    return env_loader;
 }
 
 bool DataLoaderThread::sampleData()
