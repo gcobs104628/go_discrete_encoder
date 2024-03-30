@@ -7,6 +7,8 @@
 #include <fstream>
 #include <utility>
 
+#include <iostream>
+
 namespace minizero::learner {
 
 using namespace minizero;
@@ -110,12 +112,9 @@ bool DataLoaderThread::addEnvironmentLoader()
     std::string env_string = getSharedData()->getNextEnvString();
     if (env_string.empty()) { return false; }
 
-    // EnvironmentLoader env_loader;
-
     EnvironmentLoader env_loader = loadGame(env_string);
     if (!env_loader.getActionPairs().empty()) {
         assert(!env_loader.getTag("BR").empty());
-        std::lock_guard<std::mutex> lock(getSharedData()->mutex_);
         getSharedData()->replay_buffer_.addData(env_loader);
     }
 
