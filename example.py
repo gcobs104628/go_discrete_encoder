@@ -22,6 +22,7 @@ class MinizeroDadaLoader:
 
         # allocate memory
         self.sampled_index = np.zeros(py.get_batch_size() * 2, dtype=np.int32)
+        self.next_features = np.zeros(py.get_batch_size() * py.get_nn_num_input_channels() * py.get_nn_input_channel_height() * py.get_nn_input_channel_width(), dtype=np.float32)
         self.features = np.zeros(py.get_batch_size() * py.get_nn_num_input_channels() * py.get_nn_input_channel_height() * py.get_nn_input_channel_width(), dtype=np.float32)
         self.loss_scale = np.zeros(py.get_batch_size(), dtype=np.float32)
         self.value_accumulator = np.ones(1) if py.get_nn_discrete_value_size() == 1 else np.arange(-int(py.get_nn_discrete_value_size() / 2), int(py.get_nn_discrete_value_size() / 2) + 1)
@@ -41,7 +42,9 @@ class MinizeroDadaLoader:
         self.data_loader.load_data_from_file(file_name)
 
     def sample_data(self, device='cpu'):
-        self.data_loader.sample_data(self.features, self.action_features, self.policy, self.value, self.reward, self.loss_scale, self.sampled_index)
+        self.data_loader.sample_data(self.next_features, self.features, self.action_features, self.policy, self.value, self.reward, self.loss_scale, self.sampled_index)
+        next_features = torch.FloatTensor(self.next_features).view(py.get_batch_size(), py.get_nn_num_input_channels(), py.get_nn_input_channel_height(), py.get_nn_input_channel_width()).to(device)
+
         features = torch.FloatTensor(self.features).view(py.get_batch_size(), py.get_nn_num_input_channels(), py.get_nn_input_channel_height(), py.get_nn_input_channel_width()).to(device)
         action_features = None if self.action_features is None else torch.FloatTensor(self.action_features).view(py.get_batch_size(),
                                                                                                                  -1,
@@ -54,7 +57,7 @@ class MinizeroDadaLoader:
         loss_scale = torch.FloatTensor(self.loss_scale / np.amax(self.loss_scale)).to(device)
         sampled_index = self.sampled_index
 
-        return features, action_features, policy, value, reward, loss_scale, sampled_index
+        return next_features, features, action_features, policy, value, reward, loss_scale, sampled_index
 
     def update_priority(self, sampled_index, batch_values):
         batch_values = (batch_values * self.value_accumulator).sum(axis=1)
@@ -133,7 +136,7 @@ def train(model, training_dir, data_loader):
     training_info = {}
     for _ in range(1, py.get_training_step() + 1):
         model.optimizer.zero_grad()
-        features, _, label_policy, label_value, _, loss_scale, _ = data_loader.sample_data(model.device)
+        next_features, features, _, label_policy, label_value, _, loss_scale, _ = data_loader.sample_data(model.device)
 
         network_output = model.network(features)
         loss_policy, loss_value = calculate_loss(network_output, label_policy[:, 0], label_value[:, 0], None, loss_scale)
@@ -175,7 +178,8 @@ if __name__ == '__main__':
 
     # read data from file and sample data (features, policy, value)
     data_loader.load_data("clean_9D.sgf")
-    features, _, policy, value, _, _, _ = data_loader.sample_data()
+    next_features, features, _, policy, value, _, _, _ = data_loader.sample_data()
+    print(f"next_features: {next_features}")
     print(f"features: {features}")
     print(f"policy: {policy}")
     print(f"value: {value}")

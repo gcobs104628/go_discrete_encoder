@@ -69,7 +69,8 @@ PYBIND11_MODULE(minizero_py, m)
             },
             py::call_guard<py::gil_scoped_release>())
         .def(
-            "sample_data", [](learner::DataLoader& data_loader, py::array_t<float>& features, py::array_t<float>& action_features, py::array_t<float>& policy, py::array_t<float>& value, py::array_t<float>& reward, py::array_t<float>& loss_scale, py::array_t<int>& sampled_index) {
+            "sample_data", [](learner::DataLoader& data_loader, py::array_t<float>& next_features, py::array_t<float>& features, py::array_t<float>& action_features, py::array_t<float>& policy, py::array_t<float>& value, py::array_t<float>& reward, py::array_t<float>& loss_scale, py::array_t<int>& sampled_index) {
+                data_loader.getSharedData()->getDataPtr()->next_features_ = static_cast<float*>(next_features.request().ptr);
                 data_loader.getSharedData()->getDataPtr()->features_ = static_cast<float*>(features.request().ptr);
                 data_loader.getSharedData()->getDataPtr()->action_features_ = static_cast<float*>(action_features.request().ptr);
                 data_loader.getSharedData()->getDataPtr()->policy_ = static_cast<float*>(policy.request().ptr);

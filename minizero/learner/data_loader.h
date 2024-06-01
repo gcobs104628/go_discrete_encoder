@@ -21,7 +21,7 @@ class BatchDataPtr : public BaseBatchDataPtr {
 public:
     BatchDataPtr() {}
     virtual ~BatchDataPtr() = default;
-
+    float* next_features_;
     float* features_;
     float* action_features_;
     float* policy_;

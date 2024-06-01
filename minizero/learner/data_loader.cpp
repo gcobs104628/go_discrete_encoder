@@ -170,6 +170,7 @@ void DataLoaderThread::setAlphaZeroTrainingData(int batch_index)
     const EnvironmentLoader& env_loader = getSharedData()->replay_buffer_.env_loaders_[env_id];
     Rotation rotation = static_cast<Rotation>(Random::randInt() % static_cast<int>(Rotation::kRotateSize));
     float loss_scale = getSharedData()->replay_buffer_.getLossScale(p);
+    std::vector<float> next_features = env_loader.getFeatures(pos + 1, rotation);
     std::vector<float> features = env_loader.getFeatures(pos, rotation);
     std::vector<float> policy = env_loader.getPolicy(pos, rotation);
     std::vector<float> value = env_loader.getValue(pos);
@@ -178,6 +179,7 @@ void DataLoaderThread::setAlphaZeroTrainingData(int batch_index)
     getSharedData()->getDataPtr()->loss_scale_[batch_index] = loss_scale;
     getSharedData()->getDataPtr()->sampled_index_[2 * batch_index] = p.first;
     getSharedData()->getDataPtr()->sampled_index_[2 * batch_index + 1] = p.second;
+    std::copy(next_features.begin(), next_features.end(), getSharedData()->getDataPtr()->next_features_ + next_features.size() * batch_index);
     std::copy(features.begin(), features.end(), getSharedData()->getDataPtr()->features_ + features.size() * batch_index);
     std::copy(policy.begin(), policy.end(), getSharedData()->getDataPtr()->policy_ + policy.size() * batch_index);
     std::copy(value.begin(), value.end(), getSharedData()->getDataPtr()->value_ + value.size() * batch_index);
@@ -193,6 +195,7 @@ void DataLoaderThread::setMuZeroTrainingData(int batch_index)
     const EnvironmentLoader& env_loader = getSharedData()->replay_buffer_.env_loaders_[env_id];
     Rotation rotation = static_cast<Rotation>(Random::randInt() % static_cast<int>(Rotation::kRotateSize));
     float loss_scale = getSharedData()->replay_buffer_.getLossScale(p);
+    std::vector<float> next_features = env_loader.getFeatures(pos + 1, rotation);
     std::vector<float> features = env_loader.getFeatures(pos, rotation);
     std::vector<float> action_features, policy, value, reward, tmp;
     for (int step = 0; step <= config::learner_muzero_unrolling_step; ++step) {
@@ -221,6 +224,7 @@ void DataLoaderThread::setMuZeroTrainingData(int batch_index)
     getSharedData()->getDataPtr()->loss_scale_[batch_index] = loss_scale;
     getSharedData()->getDataPtr()->sampled_index_[2 * batch_index] = p.first;
     getSharedData()->getDataPtr()->sampled_index_[2 * batch_index + 1] = p.second;
+    std::copy(next_features.begin(), next_features.end(), getSharedData()->getDataPtr()->next_features_ + next_features.size() * batch_index);
     std::copy(features.begin(), features.end(), getSharedData()->getDataPtr()->features_ + features.size() * batch_index);
     std::copy(action_features.begin(), action_features.end(), getSharedData()->getDataPtr()->action_features_ + action_features.size() * batch_index);
     std::copy(policy.begin(), policy.end(), getSharedData()->getDataPtr()->policy_ + policy.size() * batch_index);
